@@ -1941,6 +1941,7 @@ function initGoogleAPIs(){
     return;
   }
   setCloudStatus('', 'Cargando Google API…');
+  
   // cargar gapi
   var s1 = document.createElement('script');
   s1.src = 'https://apis.google.com/js/api.js';
@@ -1949,6 +1950,8 @@ function initGoogleAPIs(){
       gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }).then(function(){
         gapiReady = true;
         maybeReadyForSignin();
+        // Verificamos si venimos regresando de Google con el token en la URL
+        checkTokenFromRedirect();
       }).catch(function(err){
         console.error('gapi init error', err);
         setCloudStatus('error', 'Error gapi: ' + (err.error || err.message || 'desconocido'));
@@ -1958,26 +1961,11 @@ function initGoogleAPIs(){
   s1.onerror = function(){ setCloudStatus('error', 'Falló carga gapi'); };
   document.head.appendChild(s1);
 
-  // cargar GIS
+  // cargar GIS (Configurado para redirección directa)
   var s2 = document.createElement('script');
   s2.src = 'https://accounts.google.com/gsi/client';
   s2.onload = function(){
     try{
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: function(resp){
-          if(resp.error){
-            setCloudStatus('error', 'Error login: ' + resp.error);
-            return;
-          }
-          accessToken = resp.access_token;
-          gapi.client.setToken({ access_token: accessToken });
-          setCloudStatus('connected', 'Conectado a Google ✓');
-          document.getElementById('gc-signin').style.display = 'none';
-          document.getElementById('gc-signout').style.display = '';
-        },
-      });
       gisReady = true;
       maybeReadyForSignin();
     }catch(e){
@@ -1991,23 +1979,57 @@ function initGoogleAPIs(){
 function maybeReadyForSignin(){
   if(gapiReady && gisReady){
     setCloudStatus('', 'Listo para conectar');
-    document.getElementById('gc-signin').style.display = '';
+    if(document.getElementById('gc-signin')) document.getElementById('gc-signin').style.display = '';
   }
 }
 
 function gcSignIn(){
-  if(!tokenClient){ alert('Google API no está lista todavía.'); return; }
-  tokenClient.requestAccessToken({ prompt: 'consent' });
+  if(!gapiReady){ alert('Google API no está lista todavía.'); return; }
+  
+  // Armamos la URL oficial de Google para loguear en la misma pestaña y evitar el bloqueo de ventanas
+  const redirectUri = window.location.origin + window.location.pathname;
+  const oauth2Url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
+    'client_id=' + CLIENT_ID +
+    '&redirect_uri=' + encodeURIComponent(redirectUri) +
+    '&response_type=token' +
+    '&scope=' + encodeURIComponent(SCOPES) +
+    '&include_granted_scopes=true' +
+    '&prompt=consent';
+    
+  // Redirección directa
+  window.location.href = oauth2Url;
 }
 
 function gcSignOut(){
   if(accessToken){
-    google.accounts.oauth2.revoke(accessToken, function(){});
+    try { google.accounts.oauth2.revoke(accessToken, function(){}); } catch(e){}
   }
   accessToken = null;
   setCloudStatus('', 'Desconectado');
-  document.getElementById('gc-signin').style.display = '';
-  document.getElementById('gc-signout').style.display = 'none';
+  if(document.getElementById('gc-signin')) document.getElementById('gc-signin').style.display = '';
+  if(document.getElementById('gc-signout')) document.getElementById('gc-signout').style.display = 'none';
+}
+
+function checkTokenFromRedirect() {
+  // Esta función nueva lee la respuesta que Google nos manda de vuelta en la URL
+  const hash = window.location.hash;
+  if (hash) {
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get('access_token');
+    if (token) {
+      accessToken = token;
+      gapi.client.setToken({ access_token: accessToken });
+      setCloudStatus('connected', 'Conectado a Google ✓');
+      if(document.getElementById('gc-signin')) document.getElementById('gc-signin').style.display = 'none';
+      if(document.getElementById('gc-signout')) document.getElementById('gc-signout').style.display = '';
+      
+      // Limpiamos el token de la barra de direcciones por prolijidad y seguridad
+      history.replaceState(null, null, window.location.pathname);
+      
+      // Disparamos la creación o chequeo automático del Sheets central
+      ensureSpreadsheet().catch(console.error);
+    }
+  }
 }
 
 /* ─── DRIVE: encontrar/crear subcarpeta Año/Mes ─── */
