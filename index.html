@@ -1,1 +1,2143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>OPEN 25 — Gestión de Caja</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0d0f14;--s1:#131720;--s2:#1a1f2e;--s3:#222840;
+  --b1:#252d42;--b2:#2e3850;
+  --tx:#e2e8f0;--muted:#64748b;--faint:#1e2436;
+  --green:#10b981;--gd:#059669;--gbg:#052e1c;
+  --red:#ef4444;--rbg:#2d0a0a;
+  --amber:#f59e0b;--abg:#2d1a00;
+  --blue:#6366f1;--bluebg:#1a1e35;
+  --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--gd);border-radius:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+
+/* ═══════ LOGIN OVERLAY ═══════ */
+#login{
+  position:fixed;inset:0;z-index:5000;
+  background:linear-gradient(135deg,#0d0f14 0%,#1a1f2e 100%);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+}
+#login.off{display:none}
+.login-box{
+  background:var(--s1);border:1px solid var(--b1);border-radius:14px;
+  padding:32px 28px;max-width:380px;width:100%;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-brand{
+  font-family:var(--font);font-weight:800;font-size:28px;letter-spacing:-.5px;
+  background:linear-gradient(90deg,var(--green) 0%,#34d399 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.login-sub{font-size:11px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-top:6px;font-family:var(--mono)}
+.login-warn{
+  background:var(--abg);border:1px solid #92400e;color:var(--amber);
+  font-size:10px;padding:8px 10px;border-radius:6px;
+  margin-bottom:16px;line-height:1.4;
+}
+.login-field{margin-bottom:14px}
+.login-field label{
+  display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;margin-bottom:5px;
+}
+.login-field input{
+  width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:8px;
+  padding:10px 12px;color:var(--tx);font-size:13px;font-family:var(--mono);outline:none;
+}
+.login-field input:focus{border-color:var(--green)}
+.login-btn{
+  width:100%;padding:11px;background:var(--gd);color:#fff;border:none;
+  border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;
+  margin-top:8px;transition:.15s;font-family:var(--font);
+}
+.login-btn:hover{background:var(--green)}
+.login-err{color:var(--red);font-size:11px;text-align:center;margin-top:10px;min-height:14px}
+
+/* ═══════ HEADER ═══════ */
+#header{
+  position:sticky;top:0;z-index:200;
+  background:var(--s1);border-bottom:1px solid var(--b1);
+  padding:0 20px;height:58px;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  box-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.brand-wrap{display:flex;align-items:center;gap:12px;min-width:0}
+.brand-text{
+  font-family:var(--font);font-weight:800;font-size:18px;letter-spacing:-.4px;
+  background:linear-gradient(90deg,var(--green) 0%,#34d399 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  white-space:nowrap;
+}
+.brand-pipe{color:var(--b2);font-weight:300;margin:0 4px;font-size:18px}
+.brand-tag{font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.head-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+#cloud-status{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:10px;font-family:var(--mono);
+  padding:4px 9px;border-radius:99px;
+  background:var(--s2);border:1px solid var(--b2);color:var(--muted);
+}
+#cloud-status.connected{color:var(--green);border-color:var(--gd);background:var(--gbg)}
+#cloud-status.error{color:var(--red);border-color:#991b1b;background:var(--rbg)}
+.cs-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+#top-clock{font-family:var(--mono);font-size:11px;color:var(--muted)}
+#logout-btn{
+  background:none;border:1px solid var(--b2);border-radius:6px;
+  color:var(--muted);font-size:10px;padding:4px 9px;cursor:pointer;
+  font-family:var(--font);font-weight:600;letter-spacing:.04em;
+  transition:.15s;
+}
+#logout-btn:hover{color:var(--red);border-color:var(--red)}
+
+/* ═══════ MIGRATION BANNER ═══════ */
+#mig-banner{
+  display:none;background:linear-gradient(90deg,#1a1e35 0%,#1f1a35 100%);
+  border-bottom:1px solid #3730a3;
+  padding:11px 20px;align-items:center;gap:12px;font-size:12px;
+}
+#mig-banner.on{display:flex}
+#mig-banner .mig-ico{flex-shrink:0;color:#a5b4fc}
+#mig-banner .mig-txt{flex:1;color:#c7d2fe}
+#mig-banner strong{color:#fff}
+#mig-banner .mig-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ═══════ NAV ═══════ */
+#nav{
+  background:var(--s1);border-bottom:1px solid var(--b1);
+  padding:0 20px;display:flex;gap:2px;overflow-x:auto;
+}
+.ntab{
+  padding:13px 14px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  background:none;border:none;cursor:pointer;color:var(--muted);
+  border-bottom:2px solid transparent;transition:.15s;white-space:nowrap;font-family:var(--font);
+}
+.ntab.on{color:var(--green);border-bottom-color:var(--green)}
+.ntab:hover:not(.on){color:var(--tx)}
+.nbadge{display:inline-block;background:var(--gbg);color:var(--green);font-size:10px;padding:1px 7px;border-radius:10px;margin-left:4px;font-family:var(--mono)}
+
+/* ═══════ WRAP ═══════ */
+#wrap{padding:22px 16px;max-width:1180px;margin:0 auto}
+.page{display:none}.page.on{display:block}
+
+/* ═══════ CARD ═══════ */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);margin-bottom:16px;overflow:hidden}
+.ch{padding:13px 18px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.ct{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.pip{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.cb{padding:16px 18px}
+
+/* ═══════ FORM ═══════ */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:13px}
+.fr{display:flex;flex-direction:column;gap:4px}
+.fl{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.fl-hint{font-size:10px;color:var(--muted);margin-top:2px}
+input,select,textarea{
+  background:var(--s2);border:1px solid var(--b2);border-radius:7px;
+  padding:8px 11px;color:var(--tx);font-size:13px;font-family:var(--mono);
+  outline:none;width:100%;transition:border-color .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--green)}
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}
+textarea{resize:vertical;min-height:62px;font-family:var(--font);font-size:12px;line-height:1.5}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+  padding-right:28px;cursor:pointer;-webkit-appearance:none;appearance:none;
+}
+
+/* ═══════ DYN TABLE ═══════ */
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt th{padding:8px 12px;text-align:left;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--faint)}
+.dt th.rc,.dt td.rc{text-align:right}
+.dt th.cc,.dt td.cc{text-align:center}
+.dt tbody tr{border-bottom:1px solid rgba(37,45,66,.5)}
+.dt tbody tr:hover{background:rgba(26,31,46,.6)}
+.dt td{padding:7px 10px}
+.dt td input,.dt td select{padding:6px 8px;font-size:12px;border-radius:6px}
+
+/* ═══════ ADD ROW ═══════ */
+.add-btn{
+  width:100%;margin-top:8px;padding:8px;
+  background:none;border:1px dashed var(--b2);border-radius:7px;
+  color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:.15s;font-family:var(--font);letter-spacing:.04em;
+}
+.add-btn:hover{border-color:var(--green);color:var(--green)}
+
+/* ═══════ TOTALS BAR ═══════ */
+.tbar{background:rgba(26,31,46,.9);border-top:1px solid var(--b1);padding:13px 18px;display:grid;gap:10px}
+.tbar.t2{grid-template-columns:1fr 1fr}
+.tbar.t3{grid-template-columns:repeat(3,1fr)}
+.ti .tl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.ti .tv{font-family:var(--mono);font-weight:600;font-size:15px}
+
+/* ═══════ BUTTONS ═══════ */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:8px 15px;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.15s;letter-spacing:.03em;font-family:var(--font)}
+.bg{background:var(--gd);color:#fff}.bg:hover{background:var(--green)}
+.bgh{background:var(--s2);color:var(--tx);border:1px solid var(--b2)}.bgh:hover{background:var(--s3)}
+.bd{background:var(--s2);color:var(--red);border:1px solid var(--b2)}.bd:hover{background:var(--rbg)}
+.bb{background:var(--s2);color:#818cf8;border:1px solid #3730a3}.bb:hover{background:var(--bluebg)}
+.bxs{padding:4px 9px;font-size:10px;border-radius:5px;font-weight:700}
+.brow{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:8px}
+
+/* ═══════ MISC ═══════ */
+.dr{background:none;border:none;cursor:pointer;color:var(--muted);padding:3px 6px;border-radius:4px;font-size:14px;transition:.12s}
+.dr:hover{color:var(--red)}
+.alert{padding:9px 13px;border-radius:7px;font-size:12px;display:none;margin-top:8px}
+.alert.on{display:block}
+.aok{background:rgba(5,46,28,.7);color:#6ee7b7;border:1px solid var(--gd)}
+.aerr{background:var(--rbg);color:#fca5a5;border:1px solid #991b1b}
+
+/* ═══════ EDIT BANNER ═══════ */
+#ebanner{background:#1a1e35;border:1px solid #3730a3;border-radius:8px;padding:9px 14px;margin-bottom:14px;display:none;align-items:center;gap:9px;font-size:12px}
+#ebanner.on{display:flex}
+#ebanner .etxt{color:#a5b4fc;flex:1}
+#ebanner strong{color:#818cf8}
+
+/* ═══════ FILE ═══════ */
+.fz{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#fp{display:none;align-items:center;gap:9px}
+#fp.on{display:flex}
+.fpi{width:52px;height:52px;object-fit:cover;border-radius:7px;border:1px solid var(--b2)}
+.fpic{width:52px;height:52px;background:var(--s2);border:1px solid var(--b2);border-radius:7px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;font-size:9px;color:var(--muted)}
+.fpn{font-size:11px;font-family:var(--mono);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpx{background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:3px 6px}
+.fpx:hover{color:var(--red)}
+
+/* ═══════ HIST TABLE (ancha y compacta) ═══════ */
+.ht{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto}
+.ht th{padding:9px 11px;font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--faint);text-align:left;white-space:nowrap}
+.ht th.r{text-align:right}
+.ht tbody tr{border-bottom:1px solid rgba(37,45,66,.5)}
+.ht tbody tr:hover{background:rgba(26,31,46,.5)}
+.ht td{padding:8px 11px;vertical-align:middle}
+.ht td.bens-cell{
+  white-space:normal;word-break:break-word;
+  min-width:200px;max-width:300px;
+  font-size:11px;line-height:1.45;color:var(--tx);
+}
+.ht td.bens-cell .bens-list{display:flex;flex-direction:column;gap:2px}
+.ht td.bens-cell .bens-item{font-family:var(--mono);font-size:10.5px;color:var(--tx)}
+
+/* ═══════ SEARCH ═══════ */
+.sb{position:relative;flex:1;min-width:180px}
+.sb svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted)}
+.sb input{padding-left:32px}
+
+/* ═══════ DETAIL ═══════ */
+.det{background:var(--s1);border:1px solid var(--gd);border-radius:var(--r);padding:18px;margin-top:12px;animation:sli .18s ease}
+@keyframes sli{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+.dh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.dtit{font-size:12px;font-weight:700;color:var(--green)}
+.dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:14px}
+.di .dl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.di .dv{font-family:var(--mono);font-size:12px;font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis}
+
+/* ═══════ CHECKS ═══════ */
+.cklist{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.cki{display:flex;align-items:center;gap:9px;padding:8px 11px;background:var(--s2);border-radius:7px;border:1px solid var(--b1);transition:.15s}
+.cki.done{background:rgba(5,46,28,.4);border-color:var(--gd)}
+.cki input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+.cki .cn{flex:1;font-size:12px}
+.cki .ca{font-family:var(--mono);font-size:12px;color:var(--green)}
+.cki.done .cn{text-decoration:line-through;color:var(--muted)}
+
+/* ═══════ BADGES ═══════ */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;font-family:var(--mono);white-space:nowrap}
+.bg-ok{background:var(--gbg);color:var(--green);border:1px solid var(--gd)}
+.bg-err{background:var(--rbg);color:var(--red);border:1px solid #991b1b}
+.bg-amb{background:var(--abg);color:var(--amber);border:1px solid #92400e}
+.bg-edit{background:var(--bluebg);color:#818cf8;border:1px solid #3730a3}
+
+/* ═══════ KPI / CHART ═══════ */
+.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:13px;margin-bottom:18px}
+.kpi{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:15px}
+.kpi .kl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.kpi .kv{font-family:var(--mono);font-size:20px;font-weight:700}
+.cw{overflow-x:auto;padding-bottom:5px}
+.cb2{display:flex;align-items:flex-end;gap:8px;min-height:130px}
+.bc{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:50px}
+.bv{font-size:9px;font-family:var(--mono);color:var(--green);text-align:center;line-height:1.3}
+.bf{width:30px;background:linear-gradient(180deg,var(--green) 0%,var(--gd) 100%);border-radius:4px 4px 0 0;min-height:4px;box-shadow:0 0 8px rgba(16,185,129,.25)}
+.bs{font-size:9px;color:var(--muted);text-align:center}
+
+/* ═══════ RANK / DENOM ═══════ */
+.rr{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--b1)}
+.rr:last-child{border:none}
+.rn{width:20px;height:20px;border-radius:50%;background:var(--faint);color:var(--muted);font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.rm{font-size:11px;color:var(--muted);width:140px;flex-shrink:0;font-family:var(--mono)}
+.rb{flex:1;background:var(--faint);border-radius:99px;height:5px}
+.rf{height:5px;background:var(--green);border-radius:99px}
+.rv{font-family:var(--mono);font-size:11px;color:var(--green);width:110px;text-align:right;flex-shrink:0}
+.denom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:10px}
+.denom-row{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:var(--s2);border:1px solid var(--b1);border-radius:8px;transition:border-color .15s}
+.denom-row:hover{border-color:var(--green)}
+.denom-row .dr-nom{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--muted)}
+.denom-row .dr-tot{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--green)}
+.denom-row .dr-cnt{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+
+/* ═══════ THUMB ═══════ */
+.thumb-wrap{position:relative;width:48px;height:48px;flex-shrink:0;cursor:zoom-in}
+.thumb-wrap img{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--b2);display:block;transition:opacity .15s}
+.thumb-wrap:hover img{opacity:.8}
+.thumb-overlay{position:absolute;inset:0;border-radius:6px;background:rgba(16,185,129,.18);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+.thumb-wrap:hover .thumb-overlay{opacity:1}
+.pend-label{display:inline-flex;align-items:center;gap:4px;color:var(--red);font-size:10px;font-weight:700;font-family:var(--mono);white-space:nowrap}
+
+/* ═══════ MODAL VISOR ═══════ */
+#img-modal{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:16px}
+#img-modal.on{display:flex}
+#img-modal .modal-box{position:relative;max-width:96vw;max-height:96vh;width:96vw;height:96vh;display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--b2);border-radius:14px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.8)}
+.modal-topbar{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--b1);background:var(--s2);flex-shrink:0;gap:10px}
+.modal-fname{font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modal-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+#img-modal .modal-content-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:14px;overflow:auto;background:var(--bg)}
+#modal-img{max-width:100%;max-height:100%;border-radius:7px;object-fit:contain;display:none}
+#modal-iframe{display:none;width:100%;height:100%;border:none;background:#fff;border-radius:7px}
+#modal-close{width:28px;height:28px;border-radius:6px;background:var(--s3);border:1px solid var(--b2);color:var(--tx);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;flex-shrink:0}
+#modal-close:hover{background:var(--rbg);color:var(--red);border-color:var(--red)}
+#modal-download{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;background:var(--gd);color:#fff;border:none;cursor:pointer;text-decoration:none;transition:.15s;font-family:var(--font)}
+#modal-download:hover{background:var(--green)}
+
+/* ═══════ CHEQUE PREVIEW ═══════ */
+.cheque-prev{
+  background:#fff;color:#000;border-radius:10px;padding:32px 36px;
+  font-family:'Times New Roman',Georgia,serif;
+  max-width:760px;margin:0 auto;
+  box-shadow:0 10px 40px rgba(0,0,0,.3);
+}
+.cheque-prev .ch-head{
+  text-align:center;border-bottom:3px double #000;padding-bottom:14px;margin-bottom:20px;
+}
+.cheque-prev .ch-brand{font-size:24px;font-weight:800;letter-spacing:1px;color:#0a7c4a}
+.cheque-prev .ch-title{font-size:14px;font-weight:700;letter-spacing:2px;margin-top:4px;color:#222}
+.cheque-prev .ch-row{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:16px}
+.cheque-prev .ch-num{font-size:13px;font-weight:700}
+.cheque-prev .ch-date{font-size:13px}
+.cheque-prev .ch-field{margin-bottom:14px;display:flex;align-items:baseline;gap:8px}
+.cheque-prev .ch-field .ch-lbl{font-weight:700;font-size:13px;min-width:110px}
+.cheque-prev .ch-field .ch-val{flex:1;border-bottom:1px solid #888;padding-bottom:3px;font-size:13px;min-height:20px}
+.cheque-prev .ch-imp-box{
+  border:2px solid #000;padding:14px 18px;margin:18px 0;
+  display:flex;align-items:center;justify-content:space-between;
+  background:#f9f9f9;
+}
+.cheque-prev .ch-imp-lbl{font-size:14px;font-weight:700;letter-spacing:1px}
+.cheque-prev .ch-imp-val{font-size:22px;font-weight:800;font-family:Georgia,serif}
+.cheque-prev .ch-detalle-box{border:1px solid #ccc;padding:10px 12px;margin:14px 0;min-height:50px;font-size:12px;line-height:1.5}
+.cheque-prev .ch-sigs{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:50px}
+.cheque-prev .ch-sig-block{text-align:center}
+.cheque-prev .ch-sig-line{border-top:1px solid #000;padding-top:6px;font-size:11px;font-weight:600}
+.cheque-prev .ch-footer-note{margin-top:24px;font-size:10px;color:#666;text-align:center;font-style:italic}
+
+/* ═══════ PRINT ═══════ */
+@media print{
+  body * {visibility:hidden}
+  #cheque-print-area, #cheque-print-area * {visibility:visible}
+  #cheque-print-area {position:absolute;left:0;top:0;width:100%;padding:20px}
+  .cheque-prev{box-shadow:none;border:none;margin:0;max-width:none;page-break-inside:avoid}
+  @page{size:A4;margin:1cm}
+}
+
+.empty{text-align:center;padding:36px;color:var(--muted);font-size:12px}
+.ga{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.mc{font-family:var(--mono)}
+.cg{color:var(--green);font-family:var(--mono)}
+.cr{color:var(--red);font-family:var(--mono);font-weight:700}
+.cm{color:var(--muted)}
+
+/* tooltip backup buttons */
+.backup-row{
+  background:var(--bluebg);border:1px solid #3730a3;border-radius:8px;
+  padding:11px 14px;margin-bottom:14px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.backup-row .br-txt{flex:1;color:#a5b4fc;font-size:11px;min-width:160px}
+.backup-row strong{color:#818cf8}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════
+     LOGIN OVERLAY
+═══════════════════════════════════════════ -->
+<div id="login">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-brand">OPEN 25</div>
+      <div class="login-sub">Gestión de Caja</div>
+    </div>
+    <div class="login-warn">
+      ⚠ Login local · clave visible en el código fuente. No usar como seguridad real.
+    </div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="lg-user" autocomplete="username" placeholder="OFICINA"/>
+    </div>
+    <div class="login-field">
+      <label>Clave</label>
+      <input type="password" id="lg-pass" autocomplete="current-password" placeholder="••••••"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="lg-err"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL VISOR ═══════ -->
+<div id="img-modal" onclick="closeModal(event)">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-topbar">
+      <span class="modal-fname" id="modal-fname">Recibo</span>
+      <div class="modal-actions">
+        <a id="modal-download" href="#" download="recibo.jpg" title="Descargar">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Descargar
+        </a>
+        <button id="modal-close" onclick="closeModalDirect()" title="Cerrar (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="modal-content-wrap">
+      <img id="modal-img" src="" alt="Recibo"/>
+      <iframe id="modal-iframe" src="" title="PDF"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ HEADER ═══════ -->
+<div id="header">
+  <div class="brand-wrap">
+    <span class="brand-text">OPEN 25</span>
+    <span class="brand-pipe">|</span>
+    <span class="brand-tag">Gestión de Caja</span>
+  </div>
+  <div class="head-right">
+    <div id="cloud-status"><span class="cs-dot"></span><span id="cs-text">Local</span></div>
+    <div id="top-clock"></div>
+    <button id="logout-btn" onclick="doLogout()">Salir</button>
+  </div>
+</div>
+
+<!-- ═══════ MIGRATION BANNER ═══════ -->
+<div id="mig-banner">
+  <svg class="mig-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  <span class="mig-txt">Se detectaron <strong id="mig-count">0</strong> registros locales de versiones previas. ¿Sincronizar con la nube?</span>
+  <div class="mig-actions">
+    <button class="btn bg bxs" onclick="migrateToCloud()">Sincronizar</button>
+    <button class="btn bgh bxs" onclick="dismissMigration()">Más tarde</button>
+  </div>
+</div>
+
+<!-- ═══════ NAV ═══════ -->
+<div id="nav">
+  <button class="ntab on" onclick="goTab('form',this)">Nuevo Registro</button>
+  <button class="ntab" id="tab-h" onclick="goTab('hist',this)">Historial <span class="nbadge" id="hcount">0</span></button>
+  <button class="ntab" onclick="goTab('cheque',this)">Emitir Cheque</button>
+  <button class="ntab" id="tab-cheques" onclick="goTab('cheques-hist',this)">Cheques Emitidos <span class="nbadge" id="ccount">0</span></button>
+  <button class="ntab" onclick="goTab('stats',this)">Estadísticas</button>
+  <button class="ntab" onclick="goTab('settings',this)">Configuración</button>
+</div>
+
+<!-- ═══════ WRAP ═══════ -->
+<div id="wrap">
+
+<!-- ══════ FORM ══════ -->
+<div class="page on" id="page-form">
+
+  <div id="ebanner">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    <span class="etxt">Editando recibo <strong id="elabel">#—</strong>. Guardá para actualizar.</span>
+    <button class="btn bgh bxs" onclick="cancelEdit()">Cancelar</button>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>ENCABEZADO</div></div>
+    <div class="cb">
+      <div class="fg">
+        <div class="fr"><span class="fl">Fecha</span><input type="date" id="f-fecha"/></div>
+        <div class="fr"><span class="fl">N° Recibo</span><input type="text" id="f-recibo" placeholder="ej. 00045"/></div>
+        <div class="fr">
+          <span class="fl">Total a Recibir</span>
+          <input type="number" id="f-total" placeholder="0.00" oninput="onTotalManual()"/>
+          <span class="fl-hint">Auto desde gastos. Editable.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="pip"></div>DESGLOSE DE GASTOS</div>
+      <button class="btn bgh bxs" onclick="addGasto()">+ Fila</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead><tr><th>#</th><th>Beneficiario</th><th class="rc">Importe</th><th></th></tr></thead>
+        <tbody id="gb"></tbody>
+      </table>
+    </div>
+    <div style="padding:6px 16px">
+      <button class="add-btn" onclick="addGasto()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        AGREGAR BENEFICIARIO
+      </button>
+    </div>
+    <div class="tbar t2">
+      <div class="ti"><div class="tl">Suma Gastos</div><div class="tv" id="sg" style="color:var(--tx)">$ 0,00</div></div>
+      <div class="ti"><div class="tl">Total a Recibir</div><div class="tv cg" id="sth">$ 0,00</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div class="ct"><div class="pip"></div>CONTEO DE BILLETES — MODO FAJOS</div>
+      <button class="btn bgh bxs" onclick="addBillete()">+ Fila</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="dt">
+        <thead><tr>
+          <th>Denominación</th>
+          <th class="cc" style="width:90px">Cantidad</th>
+          <th class="cc" style="width:90px">× Fajo</th>
+          <th class="rc" style="width:120px">Subtotal</th>
+          <th style="width:36px"></th>
+        </tr></thead>
+        <tbody id="bb"></tbody>
+      </table>
+    </div>
+    <div style="padding:6px 16px">
+      <button class="add-btn" onclick="addBillete()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        AGREGAR FILA DE BILLETES
+      </button>
+    </div>
+    <div class="tbar t3">
+      <div class="ti"><div class="tl">Total Teórico</div><div class="tv" id="bte" style="color:var(--tx)">$ 0,00</div></div>
+      <div class="ti"><div class="tl">Suma Real</div><div class="tv cg" id="bre">$ 0,00</div></div>
+      <div class="ti"><div class="tl">Diferencia</div><div class="tv cg" id="bdi">$ 0,00</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>ADJUNTO Y NOTAS</div></div>
+    <div class="cb" style="display:flex;flex-direction:column;gap:13px">
+      <div class="fr">
+        <span class="fl">Imagen / PDF del recibo</span>
+        <div class="fz">
+          <button class="btn bgh" style="font-size:12px" onclick="document.getElementById('f-file').click()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Seleccionar
+          </button>
+          <input type="file" id="f-file" accept="image/*,.pdf,application/pdf" style="display:none" onchange="handleFile(this)"/>
+          <div id="fp">
+            <div id="fp-thumb"></div>
+            <span class="fpn" id="fp-name"></span>
+            <button class="fpx" onclick="removeFile()">✕</button>
+          </div>
+        </div>
+        <span class="fl-hint">Imágenes comprimidas a 800px / calidad 0.7. PDFs guardados tal cual.</span>
+      </div>
+      <div class="fr">
+        <span class="fl">Observaciones</span>
+        <textarea id="f-notas" placeholder="Notas adicionales…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="brow">
+    <button class="btn bg" id="sbtn" onclick="saveRecord()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      <span id="sbtxt">Guardar Recibo</span>
+    </button>
+    <button class="btn bgh" onclick="resetForm()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.29"/></svg>
+      Limpiar
+    </button>
+    <div class="alert" id="falert"></div>
+  </div>
+</div>
+
+<!-- ══════ HISTORIAL ══════ -->
+<div class="page" id="page-hist">
+  <div style="display:flex;gap:9px;margin-bottom:13px;flex-wrap:wrap;align-items:center">
+    <div class="sb">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="hs" placeholder="Buscar recibo, fecha, beneficiario…" oninput="renderHist()"/>
+    </div>
+    <button class="btn bgh" style="font-size:12px" onclick="exportAllCSV()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar CSV
+    </button>
+  </div>
+  <div class="card">
+    <div style="overflow-x:auto">
+      <table class="ht">
+        <thead><tr>
+          <th>Fecha</th><th>Recibo</th><th>Beneficiarios</th>
+          <th class="r">Teórico</th><th class="r">Real</th><th class="r">Dif.</th>
+          <th>Estado</th><th>Adjunto</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="hb"></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="hdet"></div>
+</div>
+
+<!-- ══════ EMITIR CHEQUE ══════ -->
+<div class="page" id="page-cheque">
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>NUEVO COMPROBANTE DE PAGO</div></div>
+    <div class="cb">
+      <div class="fg">
+        <div class="fr"><span class="fl">Fecha</span><input type="date" id="ch-fecha"/></div>
+        <div class="fr">
+          <span class="fl">Cuenta</span>
+          <select id="ch-cuenta">
+            <option>Fondo de Caja</option>
+            <option>Fondo de Caja Mateo</option>
+          </select>
+        </div>
+        <div class="fr">
+          <span class="fl">N° Comprobante</span>
+          <input type="text" id="ch-num" readonly style="opacity:.7" title="Numeración automática correlativa"/>
+        </div>
+        <div class="fr">
+          <span class="fl">Importe</span>
+          <input type="number" id="ch-importe" placeholder="0.00" oninput="renderChequePrev()"/>
+        </div>
+        <div class="fr" style="grid-column:1/-1">
+          <span class="fl">Detalle / Motivo</span>
+          <textarea id="ch-detalle" placeholder="Descripción del pago…" oninput="renderChequePrev()"></textarea>
+        </div>
+        <div class="fr"><span class="fl">Receptor (cobra)</span><input type="text" id="ch-receptor" placeholder="Nombre del receptor" oninput="renderChequePrev()"/></div>
+        <div class="fr"><span class="fl">Emisor (paga)</span><input type="text" id="ch-emisor" placeholder="Nombre del emisor" oninput="renderChequePrev()"/></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>VISTA PREVIA — A4</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn bg" onclick="printCheque()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Imprimir
+        </button>
+        <button class="btn bg" onclick="saveCheque()">Guardar y Emitir</button>
+      </div>
+    </div>
+    <div class="cb" style="background:#2a2a2a;padding:24px">
+      <div id="cheque-print-area">
+        <div class="cheque-prev" id="cheque-preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ HISTORIAL DE CHEQUES ══════ -->
+<div class="page" id="page-cheques-hist">
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>CHEQUES EMITIDOS</div></div>
+    <div style="overflow-x:auto">
+      <table class="ht">
+        <thead><tr>
+          <th>N°</th><th>Fecha</th><th>Cuenta</th>
+          <th>Receptor</th><th>Detalle</th>
+          <th class="r">Importe</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="chb"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ ESTADÍSTICAS ══════ -->
+<div class="page" id="page-stats">
+  <div class="kg" id="kg"></div>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>INGRESOS POR MES</div></div>
+    <div class="cb"><div class="cw"><div class="cb2" id="chart"></div></div></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>TOP 5 — MAYOR RECIBO</div></div>
+    <div class="cb" id="top5"></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>RESUMEN DE DENOMINACIONES — ACUMULADO</div></div>
+    <div class="cb"><div class="denom-grid" id="denom-grid"></div></div>
+  </div>
+</div>
+
+<!-- ══════ CONFIGURACIÓN ══════ -->
+<div class="page" id="page-settings">
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>BACKUP / RESTORE LOCAL</div></div>
+    <div class="cb">
+      <div class="backup-row">
+        <span class="br-txt">Descargá un archivo <strong>JSON</strong> con todos tus datos para tener un backup independiente del navegador.</span>
+        <button class="btn bb" onclick="exportJSON()">Exportar JSON</button>
+        <button class="btn bb" onclick="document.getElementById('import-file').click()">Importar JSON</button>
+        <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importJSON(this)"/>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>GOOGLE CLOUD</div></div>
+    <div class="cb">
+      <div class="backup-row">
+        <span class="br-txt"><strong>Estado:</strong> <span id="gc-status">Pendiente configurar credenciales</span></span>
+        <button class="btn bg" id="gc-signin" onclick="gcSignIn()" style="display:none">Conectar con Google</button>
+        <button class="btn bgh" id="gc-signout" onclick="gcSignOut()" style="display:none">Desconectar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.7;padding:8px 0">
+        <strong style="color:var(--tx)">Para activar Google Cloud:</strong><br/>
+        1. Hostear este archivo en HTTPS (ver instrucciones en comentario del código).<br/>
+        2. Crear proyecto en console.cloud.google.com<br/>
+        3. Habilitar Drive API + Sheets API<br/>
+        4. Crear Client ID OAuth + API Key con la URL del hosting autorizada<br/>
+        5. Pegar credenciales abajo en CLIENT_ID y API_KEY<br/>
+        6. Recargar la página y hacer clic en "Conectar con Google"
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct"><div class="pip"></div>ZONA DE PELIGRO</div></div>
+    <div class="cb">
+      <div class="backup-row" style="background:var(--rbg);border-color:#7f1d1d">
+        <span class="br-txt" style="color:#fca5a5">Borrar todos los datos locales. <strong>No se puede deshacer</strong>. Exportá un JSON antes.</span>
+        <button class="btn bd" onclick="wipeAll()">Borrar Todo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   ╔══════════════════════════════════════════════════════════════════════╗
+   ║  CREDENCIALES GOOGLE — PEGAR ACÁ DESPUÉS DE HOSTEAR EN HTTPS         ║
+   ╚══════════════════════════════════════════════════════════════════════╝
+
+   Ver instrucciones detalladas en el comentario al inicio del archivo.
+
+   Las credenciales que compartiste en el chat anterior están COMPROMETIDAS.
+   Rotalas en console.cloud.google.com ANTES de pegarlas acá.
+═══════════════════════════════════════════════════════════════════════════ */
+const CLIENT_ID = 363966783028-gdrk4ptvdst00rqjdl2hnbhn94g0354n.apps.googleusercontent.com;
+const API_KEY   = AIzaSyBny-ywvdjk-z15AzPA_m5FheM2PXWXp20;
+const DRIVE_FOLDER_ROOT = '1hhr0rO-Gg51dXCrZQyxL2Jg2FyYiu13C';
+
+const DISCOVERY_DOCS = [
+  'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+  'https://sheets.googleapis.com/$discovery/rest?version=v4'
+];
+const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
+
+/* ═══════════════════════════════════════════
+   ESTADO GLOBAL
+═══════════════════════════════════════════ */
+const LS_CURRENT = 'ffv6';
+const LS_LEGACY  = ['ffv5','ffv4','ffjv4'];   // claves de migración
+const LS_CHEQUES = 'ffv6_cheques';
+const LS_CHEQUE_SEQ = 'ffv6_cheque_seq';
+const LS_AUTH = 'ffv6_auth';
+const LS_MIG_DISMISSED = 'ffv6_mig_dismissed';
+
+let records  = [];
+let cheques  = [];
+let chequeSeq = 0;
+
+let fileData    = null;
+let editId      = null;
+let openId      = null;
+let manualTotal = false;
+let alertTmr    = null;
+let gseq = 0, bseq = 0;
+
+let gapiReady = false;
+let gisReady  = false;
+let tokenClient = null;
+let accessToken = null;
+let currentPdfBlobUrl = null;   // para revoke al cerrar modal
+
+const NOMS = [20000,10000,5000,2000,1000,500,200,100,50,20,10];
+
+/* ═══════════════════════════════════════════
+   PERSIST
+═══════════════════════════════════════════ */
+function loadAll(){
+  try{ records = JSON.parse(localStorage.getItem(LS_CURRENT)) || []; }catch(e){ records = []; }
+  try{ cheques = JSON.parse(localStorage.getItem(LS_CHEQUES)) || []; }catch(e){ cheques = []; }
+  try{ chequeSeq = parseInt(localStorage.getItem(LS_CHEQUE_SEQ)) || 0; }catch(e){ chequeSeq = 0; }
+}
+function saveR(){
+  try{ localStorage.setItem(LS_CURRENT, JSON.stringify(records)); }
+  catch(e){ flash('LocalStorage lleno. Exportá un JSON y borrá registros antiguos.', false); }
+}
+function saveCheques(){
+  try{
+    localStorage.setItem(LS_CHEQUES, JSON.stringify(cheques));
+    localStorage.setItem(LS_CHEQUE_SEQ, String(chequeSeq));
+  } catch(e){ flash('LocalStorage lleno.', false); }
+}
+
+/* ═══════════════════════════════════════════
+   UTILS
+═══════════════════════════════════════════ */
+function ars(v){
+  return new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:2}).format(v||0);
+}
+function today(){ return new Date().toISOString().slice(0,10); }
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+function mlabel(k){
+  var p = k.split('-');
+  return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][+p[1]-1]+' '+p[0];
+}
+function esc(v){ return '"' + (v||'').toString().replace(/"/g,'""') + '"'; }
+function pad(n,w){ var s = String(n); while(s.length<w) s='0'+s; return s; }
+
+/* ═══════════════════════════════════════════
+   LOGIN — ⚠ NO ES SEGURIDAD REAL
+═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════
+   LOGIN CON ENCRIPTACIÓN SHA-256 (Anti-F12)
+═══════════════════════════════════════════ */
+const LOCK_USER = 'OFICINA';
+// Este chorizo de texto es el código SHA-256 de "123456"
+const LOCK_PASS_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
+
+// Función auxiliar para encriptar la clave que ingresa el usuario
+async function calcularSHA256(text) {
+  const msgBuffer = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function checkAuthOnLoad(){
+  if(sessionStorage.getItem(LS_AUTH) === 'ok'){
+    document.getElementById('login').classList.add('off');
+    boot();
+  } else {
+    document.getElementById('login').classList.remove('off');
+    setTimeout(()=>document.getElementById('lg-user').focus(), 100);
+  }
+}
+
+async function doLogin(){
+  var u = document.getElementById('lg-user').value.trim().toUpperCase();
+  var p = document.getElementById('lg-pass').value;
+  
+  // Calculamos el hash de lo que el usuario escribió en la pantalla
+  const inputHash = await calcularSHA256(p);
+
+  if(u === LOCK_USER && inputHash === LOCK_PASS_HASH){
+    sessionStorage.setItem(LS_AUTH, 'ok');
+    document.getElementById('login').classList.add('off');
+    document.getElementById('lg-err').textContent = '';
+    document.getElementById('lg-pass').value = '';
+    boot();
+  } else {
+    document.getElementById('lg-err').textContent = 'Usuario o clave incorrectos.';
+  }
+}
+/* ═══════════════════════════════════════════
+   BOOT
+═══════════════════════════════════════════ */
+function boot(){
+  loadAll();
+  document.getElementById('f-fecha').value = today();
+  document.getElementById('ch-fecha').value = today();
+  document.getElementById('ch-num').value = nextChequeNumber();
+  startClock();
+  addGasto();
+  addBillete();
+  refreshTotals();
+  updateCount();
+  renderChequePrev();
+  detectLegacyData();
+  initGoogleAPIs();
+}
+function startClock(){
+  function tick(){
+    document.getElementById('top-clock').textContent =
+      new Date().toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+  tick(); setInterval(tick, 60000);
+}
+
+/* ═══════════════════════════════════════════
+   MIGRACIÓN DESDE CLAVES ANTIGUAS
+═══════════════════════════════════════════ */
+function detectLegacyData(){
+  if(localStorage.getItem(LS_MIG_DISMISSED) === '1') return;
+  let total = 0;
+  let foundLegacy = false;
+  LS_LEGACY.forEach(function(k){
+    try{
+      var arr = JSON.parse(localStorage.getItem(k));
+      if(Array.isArray(arr) && arr.length){
+        total += arr.length;
+        foundLegacy = true;
+      }
+    }catch(e){}
+  });
+  // si ya tengo datos en v6 y no quedan legacy, no mostrar
+  if(!foundLegacy) return;
+  document.getElementById('mig-count').textContent = total;
+  document.getElementById('mig-banner').classList.add('on');
+}
+
+function loadLegacyMerged(){
+  // une todas las versiones legacy en un array normalizado
+  let merged = [];
+  LS_LEGACY.forEach(function(k){
+    try{
+      var arr = JSON.parse(localStorage.getItem(k));
+      if(!Array.isArray(arr)) return;
+      arr.forEach(function(r){
+        // normalizar estructura - distintas versiones tienen diferentes shapes
+        if(!r) return;
+        merged.push({
+          id:        r.id || uid(),
+          fecha:     r.fecha || today(),
+          recibo:    r.recibo || '',
+          teorico:   Number(r.teorico)   || 0,
+          real:      Number(r.real)      || 0,
+          diferencia: Number(r.diferencia) || ((Number(r.real)||0) - (Number(r.teorico)||0)),
+          gastos:    Array.isArray(r.gastos) ? r.gastos : [],
+          billetes:  Array.isArray(r.billetes) ? r.billetes : normalizeLegacyBilletes(r.billetes),
+          notas:     r.notas || '',
+          archivo:   r.archivo || null,
+          filedata:  r.filedata || null,
+          fileImg:   r.fileImg !== undefined ? r.fileImg : true,
+          _src:      k
+        });
+      });
+    }catch(e){}
+  });
+  return merged;
+}
+
+function normalizeLegacyBilletes(b){
+  // versiones tempranas guardaban {1000:5, 500:2} en vez de array
+  if(!b || typeof b !== 'object') return [];
+  if(Array.isArray(b)) return b;
+  var out = [];
+  Object.keys(b).forEach(function(k){
+    var cant = Number(b[k])||0;
+    if(cant > 0){
+      var nom = Number(k);
+      out.push({nom: nom, cant: cant, fajo: 1, sub: nom * cant});
+    }
+  });
+  return out;
+}
+
+function migrateToCloud(){
+  // si Google no está conectado, hacemos migración local
+  var legacy = loadLegacyMerged();
+  if(!legacy.length){
+    flash('No hay datos legacy para migrar.', false);
+    dismissMigration();
+    return;
+  }
+  // mergear con records actuales, evitando duplicados por (fecha + recibo)
+  var existing = new Set(records.map(function(r){ return r.fecha+'|'+r.recibo; }));
+  var added = 0;
+  legacy.forEach(function(r){
+    var k = r.fecha+'|'+r.recibo;
+    if(!existing.has(k)){
+      records.unshift(r);
+      existing.add(k);
+      added++;
+    }
+  });
+  saveR();
+  updateCount();
+
+  if(accessToken){
+    // subir a Sheets también
+    flash('Migrados ' + added + ' registros localmente. Sincronizando con Sheets…');
+    syncRecordsToSheets().then(function(){
+      flash('Migración completa: ' + added + ' registros en la nube ✓');
+    }).catch(function(err){
+      flash('Migración local OK, error en nube: ' + err.message, false);
+    });
+  } else {
+    flash('Migrados ' + added + ' registros a v6 ✓ (Conectá Google para subir a la nube)');
+  }
+  dismissMigration();
+  renderHist();
+}
+
+function dismissMigration(){
+  localStorage.setItem(LS_MIG_DISMISSED, '1');
+  document.getElementById('mig-banner').classList.remove('on');
+}
+
+/* ═══════════════════════════════════════════
+   TABS
+═══════════════════════════════════════════ */
+function goTab(id, btn){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ntab').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('page-'+id).classList.add('on');
+  btn.classList.add('on');
+  if(id === 'hist')  renderHist();
+  if(id === 'stats') renderStats();
+  if(id === 'cheque') { document.getElementById('ch-num').value = nextChequeNumber(); renderChequePrev(); }
+  if(id === 'cheques-hist') renderChequesHist();
+}
+
+/* ═══════════════════════════════════════════
+   GASTOS
+═══════════════════════════════════════════ */
+function addGasto(benef, imp){
+  var id = 'g' + (++gseq);
+  var tr = document.createElement('tr');
+  tr.id = id;
+  tr.innerHTML =
+    '<td style="color:var(--muted);font-family:var(--mono);font-size:10px;width:30px">' + gseq + '</td>' +
+    '<td><input type="text" style="width:100%" placeholder="Beneficiario (opcional)" id="' + id + '-b" value="' + (benef||'').replace(/"/g,'&quot;') + '"/></td>' +
+    '<td class="rc"><input type="number" style="width:110px" placeholder="0.00" id="' + id + '-i" value="' + (imp||'') + '" oninput="onGasto()"/></td>' +
+    '<td><button class="dr" onclick="delGRow(\'' + id + '\')">✕</button></td>';
+  document.getElementById('gb').appendChild(tr);
+}
+function delGRow(id){
+  var el = document.getElementById(id);
+  if(el) el.parentNode.removeChild(el);
+  onGasto();
+}
+function onGasto(){
+  var sum = 0;
+  document.getElementById('gb').querySelectorAll('tr').forEach(function(tr){
+    var inp = tr.querySelector('input[type=number]');
+    if(inp) sum += Number(inp.value) || 0;
+  });
+  document.getElementById('sg').textContent = ars(sum);
+  if(!manualTotal){
+    document.getElementById('f-total').value = sum || '';
+    document.getElementById('sth').textContent = ars(sum);
+  }
+  refreshTotals();
+}
+function onTotalManual(){
+  manualTotal = true;
+  document.getElementById('sth').textContent = ars(Number(document.getElementById('f-total').value)||0);
+  refreshTotals();
+}
+
+/* ═══════════════════════════════════════════
+   BILLETES — FAJOS
+═══════════════════════════════════════════ */
+function nomOpts(sel){
+  return NOMS.map(function(n){
+    return '<option value="' + n + '"' + (n === (sel||10000) ? ' selected' : '') + '>' + ars(n) + '</option>';
+  }).join('');
+}
+function addBillete(nom, cant, xf){
+  var id = 'b' + (++bseq);
+  var tr = document.createElement('tr');
+  tr.id = id;
+  tr.innerHTML =
+    '<td><select id="' + id + '-n" onchange="refreshB()" style="width:130px">' + nomOpts(nom) + '</select></td>' +
+    '<td class="cc"><input type="number" min="0" placeholder="0" id="' + id + '-c" value="' + (cant||'') + '" oninput="refreshB()" style="width:78px;text-align:center"/></td>' +
+    '<td class="cc"><input type="number" min="1" placeholder="1" id="' + id + '-f" value="' + (xf||1) + '" oninput="refreshB()" style="width:68px;text-align:center"/></td>' +
+    '<td class="rc" id="' + id + '-s" style="color:var(--muted);font-family:var(--mono)">—</td>' +
+    '<td><button class="dr" onclick="delBRow(\'' + id + '\')">✕</button></td>';
+  document.getElementById('bb').appendChild(tr);
+  refreshB();
+}
+function delBRow(id){
+  var el = document.getElementById(id);
+  if(el) el.parentNode.removeChild(el);
+  refreshB();
+}
+function refreshB(){
+  var real = 0;
+  document.getElementById('bb').querySelectorAll('tr').forEach(function(tr){
+    var sn = tr.querySelector('select');
+    var ic = tr.querySelector('input[id$="-c"]');
+    var xf = tr.querySelector('input[id$="-f"]');
+    var sd = tr.querySelector('td[id$="-s"]');
+    if(!sn || !ic || !sd) return;
+    var sub = (Number(sn.value)||0) * (Number(ic.value)||0) * (Number(xf ? xf.value : 1)||1);
+    real += sub;
+    sd.textContent = sub > 0 ? ars(sub) : '—';
+    sd.style.color = sub > 0 ? 'var(--green)' : 'var(--muted)';
+  });
+  refreshTotals(real);
+}
+function calcReal(){
+  var real = 0;
+  document.getElementById('bb').querySelectorAll('tr').forEach(function(tr){
+    var sn = tr.querySelector('select');
+    var ic = tr.querySelector('input[id$="-c"]');
+    var xf = tr.querySelector('input[id$="-f"]');
+    if(sn && ic) real += (Number(sn.value)||0) * (Number(ic.value)||0) * (Number(xf ? xf.value : 1)||1);
+  });
+  return real;
+}
+function refreshTotals(realOver){
+  var teo  = Number(document.getElementById('f-total').value) || 0;
+  var real = (realOver !== undefined) ? realOver : calcReal();
+  var diff = real - teo;
+  document.getElementById('bte').textContent = ars(teo);
+  document.getElementById('bre').textContent = ars(real);
+  var de = document.getElementById('bdi');
+  de.textContent = (diff > 0 ? '+' : '') + ars(diff);
+  de.style.color = diff !== 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('sth').textContent = ars(teo);
+}
+
+/* ═══════════════════════════════════════════
+   FILE (compresión canvas 800px + soporte PDF)
+═══════════════════════════════════════════ */
+function handleFile(inp){
+  var f = inp.files[0];
+  if(!f) return;
+  if(f.type.startsWith('image/')){
+    var rd = new FileReader();
+    rd.onload = function(ev){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 800;
+        var ratio = Math.min(MAX / img.width, 1);
+        var cv = document.createElement('canvas');
+        cv.width  = Math.round(img.width  * ratio);
+        cv.height = Math.round(img.height * ratio);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        var b64 = cv.toDataURL('image/jpeg', 0.7);
+        fileData = {name: f.name, data: b64, isImg: true, mime: 'image/jpeg'};
+        showThumb(b64, f.name, true);
+      };
+      img.src = ev.target.result;
+    };
+    rd.readAsDataURL(f);
+  } else {
+    // PDF u otros: guardar tal cual como base64
+    var rd2 = new FileReader();
+    rd2.onload = function(ev){
+      fileData = {name: f.name, data: ev.target.result, isImg: false, mime: f.type || 'application/pdf'};
+      showThumb(null, f.name, false);
+    };
+    rd2.readAsDataURL(f);
+  }
+}
+function showThumb(src, name, isImg){
+  document.getElementById('fp').classList.add('on');
+  document.getElementById('fp-name').textContent = name;
+  document.getElementById('fp-thumb').innerHTML = isImg
+    ? '<img src="' + src + '" class="fpi"/>'
+    : '<div class="fpic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>PDF</span></div>';
+}
+function removeFile(){
+  fileData = null;
+  document.getElementById('fp').classList.remove('on');
+  document.getElementById('fp-thumb').innerHTML = '';
+  document.getElementById('f-file').value = '';
+}
+
+/* ═══════════════════════════════════════════
+   ALERT
+═══════════════════════════════════════════ */
+function flash(msg, ok){
+  var el = document.getElementById('falert');
+  if(!el) return;
+  el.textContent = msg;
+  el.className = 'alert on ' + (ok !== false ? 'aok' : 'aerr');
+  clearTimeout(alertTmr);
+  alertTmr = setTimeout(function(){ el.className = 'alert'; }, 4500);
+}
+
+/* ═══════════════════════════════════════════
+   MODAL VISOR — IMÁGENES Y PDFs
+═══════════════════════════════════════════ */
+function openModal(src, fname, mime){
+  var img = document.getElementById('modal-img');
+  var ifr = document.getElementById('modal-iframe');
+  var dl  = document.getElementById('modal-download');
+
+  document.getElementById('modal-fname').textContent = fname || 'Archivo';
+  dl.href     = src;
+  dl.download = fname || 'archivo';
+
+  // detectar PDF: por mime o por extensión del nombre o por data URI
+  var isPDF = false;
+  if(mime && mime.indexOf('pdf') >= 0) isPDF = true;
+  else if(fname && /\.pdf$/i.test(fname)) isPDF = true;
+  else if(typeof src === 'string' && src.indexOf('data:application/pdf') === 0) isPDF = true;
+
+  // revoke previo blob URL si había
+  if(currentPdfBlobUrl){
+    try{ URL.revokeObjectURL(currentPdfBlobUrl); }catch(e){}
+    currentPdfBlobUrl = null;
+  }
+
+  if(isPDF){
+    img.style.display = 'none';
+    ifr.style.display = 'block';
+    // si es data URI, convertir a blob URL (mucho más confiable en navegadores)
+    if(typeof src === 'string' && src.indexOf('data:') === 0){
+      try{
+        var blob = dataURIToBlob(src);
+        currentPdfBlobUrl = URL.createObjectURL(blob);
+        ifr.src = currentPdfBlobUrl;
+      }catch(e){
+        ifr.src = src;   // fallback
+      }
+    } else {
+      ifr.src = src;
+    }
+  } else {
+    ifr.style.display = 'none';
+    ifr.src = '';
+    img.style.display = 'block';
+    img.src = src;
+  }
+
+  document.getElementById('img-modal').classList.add('on');
+  document.body.style.overflow = 'hidden';
+}
+function dataURIToBlob(dataURI){
+  var parts = dataURI.split(',');
+  var meta = parts[0];
+  var mime = (meta.match(/data:([^;]+)/) || [,'application/octet-stream'])[1];
+  var isBase64 = meta.indexOf('base64') >= 0;
+  var raw = isBase64 ? atob(parts[1]) : decodeURIComponent(parts[1]);
+  var bytes = new Uint8Array(raw.length);
+  for(var i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return new Blob([bytes], {type: mime});
+}
+function closeModalDirect(){
+  document.getElementById('img-modal').classList.remove('on');
+  document.getElementById('modal-img').src = '';
+  document.getElementById('modal-iframe').src = '';
+  if(currentPdfBlobUrl){
+    try{ URL.revokeObjectURL(currentPdfBlobUrl); }catch(e){}
+    currentPdfBlobUrl = null;
+  }
+  document.body.style.overflow = '';
+}
+function closeModal(e){
+  if(e.target === document.getElementById('img-modal')) closeModalDirect();
+}
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape') closeModalDirect();
+});
+
+/* ═══════════════════════════════════════════
+   COLLECT FORM
+═══════════════════════════════════════════ */
+function collectForm(){
+  var gastos = [];
+  document.getElementById('gb').querySelectorAll('tr').forEach(function(tr){
+    var ib = tr.querySelector('input[type=text]');
+    var ii = tr.querySelector('input[type=number]');
+    // GUARDADO FLEXIBLE: aceptar también si hay solo importe sin beneficiario,
+    // o solo beneficiario sin importe, o ambos
+    if(ib && ii){
+      var benef = (ib.value || '').trim();
+      var imp = Number(ii.value)||0;
+      if(benef || imp){
+        gastos.push({id: uid(), benef: benef, imp: imp, done: false});
+      }
+    }
+  });
+  var billetes = [];
+  document.getElementById('bb').querySelectorAll('tr').forEach(function(tr){
+    var sn = tr.querySelector('select');
+    var ic = tr.querySelector('input[id$="-c"]');
+    var xf = tr.querySelector('input[id$="-f"]');
+    if(sn && ic && (Number(ic.value)||0) > 0){
+      var nom  = Number(sn.value)||0;
+      var cant = Number(ic.value)||0;
+      var fajo = Number(xf ? xf.value : 1)||1;
+      billetes.push({nom: nom, cant: cant, fajo: fajo, sub: nom * cant * fajo});
+    }
+  });
+  return {
+    fecha:    document.getElementById('f-fecha').value,
+    recibo:   document.getElementById('f-recibo').value.trim(),
+    teorico:  Number(document.getElementById('f-total').value)||0,
+    real:     calcReal(),
+    gastos:   gastos,
+    billetes: billetes,
+    notas:    document.getElementById('f-notas').value.trim(),
+    archivo:  fileData ? fileData.name  : null,
+    filedata: fileData ? fileData.data  : null,
+    fileImg:  fileData ? fileData.isImg : false,
+    fileMime: fileData ? fileData.mime  : null,
+  };
+}
+
+/* ═══════════════════════════════════════════
+   SAVE / UPDATE — guardado flexible
+═══════════════════════════════════════════ */
+function saveRecord(){
+  var d = collectForm();
+  if(!d.recibo)  return flash('Ingresá un número de recibo.', false);
+  // GUARDADO FLEXIBLE: total puede estar en 0, gastos pueden estar vacíos
+
+  if(editId === null && !fileData){
+    var ok = confirm('⚠ No adjuntaste el escaneo del recibo.\n\n¿Guardar igual?');
+    if(!ok) return;
+  }
+
+  d.diferencia = d.real - d.teorico;
+
+  if(editId !== null){
+    var idx = -1;
+    for(var i = 0; i < records.length; i++){ if(records[i].id === editId){ idx = i; break; } }
+    if(idx >= 0){
+      var prev = records[idx];
+      d.id = editId;
+      d.gastos.forEach(function(g){
+        var old = (prev.gastos || []).find(function(x){ return x.benef === g.benef; });
+        if(old) g.done = old.done;
+      });
+      records[idx] = d;
+    }
+    cancelEdit();
+  } else {
+    if(records.find(function(r){ return r.recibo === d.recibo; })){
+      return flash('El recibo N° ' + d.recibo + ' ya existe.', false);
+    }
+    d.id = uid();
+    records.unshift(d);
+  }
+  saveR();
+
+  // si Google está conectado, sincronizar
+  if(accessToken){
+    appendRecordToSheets(d).catch(function(err){
+      console.warn('No se pudo sincronizar:', err);
+    });
+    if(d.filedata){
+      uploadFileToDrive(d).catch(function(err){
+        console.warn('Drive upload error:', err);
+      });
+    }
+  }
+
+  // PREGUNTA: ¿generar cheque?
+  if(editId === null && d.gastos.length > 0){
+    setTimeout(function(){
+      if(confirm('¿Querés generar el Cheque de Pago para este gasto?')){
+        prepareChequeFromRecord(d);
+      }
+    }, 100);
+  }
+
+  resetForm();
+  updateCount();
+  flash('Recibo guardado ✓');
+}
+
+/* ═══════════════════════════════════════════
+   RESET / EDIT
+═══════════════════════════════════════════ */
+function resetForm(){
+  editId = null;
+  manualTotal = false;
+  fileData = null;
+  document.getElementById('ebanner').classList.remove('on');
+  document.getElementById('sbtxt').textContent = 'Guardar Recibo';
+  document.getElementById('f-fecha').value  = today();
+  document.getElementById('f-recibo').value = '';
+  document.getElementById('f-total').value  = '';
+  document.getElementById('f-notas').value  = '';
+  removeFile();
+  document.getElementById('gb').innerHTML = '';
+  document.getElementById('bb').innerHTML = '';
+  gseq = 0; bseq = 0;
+  addGasto(); addBillete();
+  refreshTotals(0);
+  document.getElementById('sg').textContent  = ars(0);
+  document.getElementById('sth').textContent = ars(0);
+}
+function cancelEdit(){ editId = null; resetForm(); }
+
+function startEdit(id){
+  var r = records.find(function(x){ return x.id === id; });
+  if(!r) return;
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ntab').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('page-form').classList.add('on');
+  document.querySelector('.ntab').classList.add('on');
+  window.scrollTo(0, 0);
+
+  editId = r.id;
+  manualTotal = true;
+  document.getElementById('ebanner').classList.add('on');
+  document.getElementById('elabel').textContent = '#' + r.recibo;
+  document.getElementById('sbtxt').textContent = 'Actualizar Recibo';
+  document.getElementById('f-fecha').value  = r.fecha;
+  document.getElementById('f-recibo').value = r.recibo;
+  document.getElementById('f-total').value  = r.teorico;
+  document.getElementById('f-notas').value  = r.notas || '';
+
+  document.getElementById('gb').innerHTML = '';
+  gseq = 0;
+  var gl = r.gastos || [];
+  if(gl.length){ gl.forEach(function(g){ addGasto(g.benef, g.imp); }); }
+  else { addGasto(); }
+
+  document.getElementById('bb').innerHTML = '';
+  bseq = 0;
+  var bl = r.billetes || [];
+  if(bl.length){ bl.forEach(function(b){ addBillete(b.nom, b.cant, b.fajo); }); }
+  else { addBillete(); }
+
+  if(r.filedata){
+    fileData = {name: r.archivo, data: r.filedata, isImg: r.fileImg, mime: r.fileMime || (r.fileImg ? 'image/jpeg':'application/pdf')};
+    showThumb(r.fileImg ? r.filedata : null, r.archivo, r.fileImg);
+  } else { removeFile(); }
+
+  refreshTotals();
+  onGasto();
+}
+
+function delRecord(id){
+  if(!confirm('¿Eliminar este recibo? No se puede deshacer.')) return;
+  records = records.filter(function(r){ return r.id !== id; });
+  saveR();
+  if(openId === id) openId = null;
+  updateCount();
+  renderHist();
+}
+
+/* ═══════════════════════════════════════════
+   HISTORIAL
+═══════════════════════════════════════════ */
+function updateCount(){
+  document.getElementById('hcount').textContent = records.length;
+  document.getElementById('ccount').textContent = cheques.length;
+}
+
+function renderHist(){
+  var q = (document.getElementById('hs').value || '').toLowerCase().trim();
+  var filt = records.filter(function(r){
+    if(!q) return true;
+    var bens = (r.gastos||[]).map(function(g){ return (g.benef||'').toLowerCase(); }).join(' ');
+    return r.recibo.toLowerCase().indexOf(q) >= 0
+        || r.fecha.indexOf(q) >= 0
+        || bens.indexOf(q) >= 0;
+  });
+  var tb = document.getElementById('hb');
+  if(!filt.length){
+    tb.innerHTML = '<tr><td colspan="9" class="empty">Sin registros.</td></tr>';
+    document.getElementById('hdet').innerHTML = '';
+    return;
+  }
+  tb.innerHTML = filt.map(function(r){
+    var bensList = (r.gastos||[]).map(function(g){
+      var n = g.benef && g.benef.trim() ? g.benef : '<span style="color:var(--muted);font-style:italic">(sin nombre)</span>';
+      return '<div class="bens-item">' + n + ' <span style="color:var(--green)">' + ars(g.imp) + '</span></div>';
+    }).join('');
+    var bensCell = bensList || '<span style="color:var(--muted)">—</span>';
+
+    var dcls = r.diferencia !== 0 ? 'cr' : 'cg';
+    var dstr = (r.diferencia > 0 ? '+' : '') + ars(r.diferencia);
+    var allD = (r.gastos||[]).length > 0 && (r.gastos||[]).every(function(g){ return g.done; });
+    var anyD = (r.gastos||[]).some(function(g){ return g.done; });
+    var badge = !r.gastos || !r.gastos.length
+      ? '<span class="badge bg-edit">—</span>'
+      : allD ? '<span class="badge bg-ok">ENTREGADO</span>'
+      : anyD ? '<span class="badge bg-amb">PARCIAL</span>'
+      : '<span class="badge bg-err">PENDIENTE</span>';
+
+    var safeData = r.filedata ? r.filedata.replace(/\\/g,'\\\\').replace(/'/g,"\\'") : '';
+    var safeName = (r.archivo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var safeMime = (r.fileMime||'').replace(/'/g,"\\'");
+    var scanCell;
+    if(r.filedata && r.fileImg){
+      scanCell =
+        '<div class="thumb-wrap" onclick="openModal(\'' + safeData + '\',\'' + safeName + '\',\'' + safeMime + '\')" title="Ampliar">' +
+          '<img src="' + r.filedata + '" alt="recibo"/>' +
+          '<div class="thumb-overlay">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+          '</div>' +
+        '</div>';
+    } else if(r.filedata && !r.fileImg){
+      scanCell =
+        '<div class="fpic" style="cursor:zoom-in;width:48px;height:48px" onclick="openModal(\'' + safeData + '\',\'' + safeName + '\',\'' + safeMime + '\')" title="Ver PDF">' +
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+          '<span style="font-size:8px;color:var(--green);font-family:var(--mono)">PDF</span>' +
+        '</div>';
+    } else {
+      scanCell =
+        '<div style="width:48px;height:48px;background:var(--rbg);border:1px solid #7f1d1d;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1px;padding:3px">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          '<span style="font-size:7px;color:var(--red);font-weight:700;font-family:var(--mono)">FALTA</span>' +
+        '</div>';
+    }
+
+    var isOpen = openId === r.id;
+    return '<tr>' +
+      '<td class="mc" style="font-size:11px;color:var(--muted);white-space:nowrap">' + r.fecha + '</td>' +
+      '<td class="mc" style="color:#fff;white-space:nowrap">' + r.recibo + '</td>' +
+      '<td class="bens-cell"><div class="bens-list">' + bensCell + '</div></td>' +
+      '<td class="r mc" style="color:var(--tx);white-space:nowrap">' + ars(r.teorico) + '</td>' +
+      '<td class="r cg" style="white-space:nowrap">' + ars(r.real) + '</td>' +
+      '<td class="r ' + dcls + '" style="white-space:nowrap">' + dstr + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td>' + scanCell + '</td>' +
+      '<td><div class="ga">' +
+        '<button class="btn bxs ' + (isOpen ? 'bg' : 'bgh') + '" onclick="toggleDet(\'' + r.id + '\')">' + (isOpen ? '▲' : '▼') + ' Ver</button>' +
+        '<button class="btn bxs bb" onclick="startEdit(\'' + r.id + '\')">Editar</button>' +
+        '<button class="btn bxs bd" onclick="delRecord(\'' + r.id + '\')">Borrar</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+  renderDet();
+}
+
+function toggleDet(id){
+  openId = openId === id ? null : id;
+  renderHist();
+}
+
+function renderDet(){
+  var wrap = document.getElementById('hdet');
+  if(!openId){ wrap.innerHTML = ''; return; }
+  var r = records.find(function(x){ return x.id === openId; });
+  if(!r){ wrap.innerHTML = ''; return; }
+
+  var dcol = r.diferencia !== 0 ? 'var(--red)' : 'var(--green)';
+  var dstr = (r.diferencia > 0 ? '+' : '') + ars(r.diferencia);
+
+  var ckHTML = '';
+  if(r.gastos && r.gastos.length){
+    ckHTML = '<div style="margin-bottom:14px"><div style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600">Entrega a Beneficiarios</div><div class="cklist">' +
+      r.gastos.map(function(g, idx){
+        var nm = g.benef && g.benef.trim() ? g.benef : '(sin nombre)';
+        return '<div class="cki' + (g.done ? ' done' : '') + '" id="ck-' + r.id + '-' + idx + '">' +
+          '<input type="checkbox" ' + (g.done ? 'checked' : '') + ' onchange="toggleCheck(\'' + r.id + '\',' + idx + ',this)"/>' +
+          '<span class="cn">' + nm + '</span>' +
+          '<span class="ca">' + ars(g.imp) + '</span>' +
+        '</div>';
+      }).join('') +
+      '</div></div>';
+  }
+
+  var bilH = '';
+  if(r.billetes && r.billetes.length){
+    bilH = '<table class="dt"><thead><tr><th>Nominal</th><th class="cc">Cant.</th><th class="cc">× Fajo</th><th class="rc">Subtotal</th></tr></thead><tbody>' +
+      r.billetes.map(function(b){
+        return '<tr><td class="mc">' + ars(b.nom) + '</td><td class="cc mc">' + b.cant + '</td><td class="cc mc">' + b.fajo + '</td><td class="rc cg">' + ars(b.sub) + '</td></tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  var safeData = r.filedata ? r.filedata.replace(/\\/g,'\\\\').replace(/'/g,"\\'") : '';
+  var safeName = (r.archivo||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  var safeMime = (r.fileMime||'').replace(/'/g,"\\'");
+
+  var imgSection = '';
+  if(r.filedata){
+    if(r.fileImg){
+      imgSection = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+        '<img src="' + r.filedata + '" style="max-height:110px;border-radius:7px;border:1px solid var(--b2);cursor:zoom-in" onclick="openModal(\'' + safeData + '\',\'' + safeName + '\',\'' + safeMime + '\')" title="Ampliar"/>' +
+        '<div>' +
+          '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Recibo adjunto</div>' +
+          '<div style="font-family:var(--mono);font-size:11px;color:var(--tx);margin-bottom:6px">' + (r.archivo||'') + '</div>' +
+          '<button class="btn bgh bxs" onclick="openModal(\'' + safeData + '\',\'' + safeName + '\',\'' + safeMime + '\')">Ver en grande</button>' +
+        '</div>' +
+      '</div>';
+    } else {
+      imgSection = '<div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+        '<div class="fpic" style="width:80px;height:80px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>PDF</span></div>' +
+        '<div>' +
+          '<div style="font-size:9px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">PDF adjunto</div>' +
+          '<div style="font-family:var(--mono);font-size:11px;color:var(--tx);margin-bottom:6px">' + (r.archivo||'') + '</div>' +
+          '<button class="btn bg bxs" onclick="openModal(\'' + safeData + '\',\'' + safeName + '\',\'' + safeMime + '\')">Abrir PDF</button>' +
+        '</div>' +
+      '</div>';
+    }
+  }
+
+  wrap.innerHTML = '<div class="det">' +
+    '<div class="dh"><span class="dtit">Detalle — Recibo N° ' + r.recibo + ' · ' + r.fecha + '</span><button class="btn bgh bxs" onclick="exportOneCSV(\'' + r.id + '\')">CSV</button></div>' +
+    '<div class="dgrid">' +
+      '<div class="di"><span class="dl">Teórico</span><span class="dv" style="color:var(--tx)">' + ars(r.teorico) + '</span></div>' +
+      '<div class="di"><span class="dl">Real</span><span class="dv cg">' + ars(r.real) + '</span></div>' +
+      '<div class="di"><span class="dl">Diferencia</span><span class="dv" style="color:' + dcol + '">' + dstr + '</span></div>' +
+      '<div class="di"><span class="dl">Archivo</span><span class="dv cm">' + (r.archivo ? r.archivo : '<span style="color:var(--red);font-weight:700">SIN ADJUNTO</span>') + '</span></div>' +
+    '</div>' +
+    imgSection +
+    (r.notas ? '<div style="background:var(--s2);border:1px solid var(--b1);border-radius:7px;padding:10px 13px;font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6"><strong style="color:var(--tx);font-size:9px;letter-spacing:.07em;text-transform:uppercase">Notas</strong><br/>' + r.notas + '</div>' : '') +
+    ckHTML + bilH +
+  '</div>';
+}
+
+function toggleCheck(rid, idx, cb){
+  var r = records.find(function(x){ return x.id === rid; });
+  if(!r || !r.gastos || !r.gastos[idx]) return;
+  r.gastos[idx].done = cb.checked;
+  saveR();
+  var el = document.getElementById('ck-' + rid + '-' + idx);
+  if(el){ cb.checked ? el.classList.add('done') : el.classList.remove('done'); }
+  renderHist();
+}
+
+/* ═══════════════════════════════════════════
+   CSV EXPORT
+═══════════════════════════════════════════ */
+function exportOneCSV(id){
+  var r = records.find(function(x){ return x.id === id; });
+  if(!r) return;
+  var rows = [
+    ['ENCABEZADO'],
+    ['Fecha','N° Recibo','Total Teórico','Total Real','Diferencia','Notas'],
+    [r.fecha, r.recibo, r.teorico, r.real, r.diferencia, r.notas||''],
+    [],
+    ['GASTOS'],
+    ['Beneficiario','Importe','Entregado'],
+  ];
+  (r.gastos||[]).forEach(function(g){ rows.push([g.benef||'(sin nombre)', g.imp, g.done ? 'Sí' : 'No']); });
+  rows.push([]); rows.push(['BILLETES']); rows.push(['Nominal','Cantidad','× Fajo','Subtotal']);
+  (r.billetes||[]).forEach(function(b){ rows.push([b.nom, b.cant, b.fajo, b.sub]); });
+  dlCSV(rows, 'fondo_' + r.recibo + '_' + r.fecha + '.csv');
+}
+function exportAllCSV(){
+  var rows = [['Fecha','N° Recibo','Total Teórico','Total Real','Diferencia','Beneficiarios','Notas']];
+  records.forEach(function(r){
+    var bens = (r.gastos||[]).map(function(g){ return (g.benef||'(sin nombre)') + ' (' + ars(g.imp) + ')'; }).join(' | ');
+    rows.push([r.fecha, r.recibo, r.teorico, r.real, r.diferencia, bens, r.notas||'']);
+  });
+  dlCSV(rows, 'open25_fondos_historico.csv');
+}
+function dlCSV(rows, fn){
+  var csv = rows.map(function(r){ return r.map(function(c){ return esc(c); }).join(';'); }).join('\n');
+  var blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = fn; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* ═══════════════════════════════════════════
+   STATS
+═══════════════════════════════════════════ */
+function renderStats(){
+  var total  = records.reduce(function(s,r){ return s + r.real; }, 0);
+  var conDif = records.filter(function(r){ return r.diferencia !== 0; }).length;
+
+  document.getElementById('kg').innerHTML = [
+    ['REGISTROS',       records.length,          '#e2e8f0'],
+    ['TOTAL ACUMULADO', ars(total),               'var(--green)'],
+    ['CON DIFERENCIA',  conDif,                   conDif > 0 ? 'var(--red)' : 'var(--green)'],
+    ['SIN DIFERENCIA',  records.length - conDif,  'var(--green)'],
+  ].map(function(k){
+    return '<div class="kpi"><div class="kl">' + k[0] + '</div><div class="kv" style="color:' + k[2] + '">' + k[1] + '</div></div>';
+  }).join('');
+
+  var monthly = {};
+  records.forEach(function(r){ var k = r.fecha.slice(0,7); monthly[k] = (monthly[k]||0) + r.real; });
+  var months = Object.keys(monthly).sort();
+  var maxV = 0;
+  months.forEach(function(m){ if(monthly[m] > maxV) maxV = monthly[m]; });
+  if(!maxV) maxV = 1;
+
+  var chartEl = document.getElementById('chart');
+  if(!months.length){
+    chartEl.innerHTML = '<div class="empty" style="width:100%">Sin datos aún.</div>';
+  } else {
+    chartEl.innerHTML = months.map(function(m){
+      var h = Math.max((monthly[m] / maxV) * 120, 4);
+      var label = ars(monthly[m]).replace('$','').trim();
+      return '<div class="bc"><div class="bv">' + label + '</div><div class="bf" style="height:' + h + 'px"></div><div class="bs">' + mlabel(m) + '</div></div>';
+    }).join('');
+  }
+
+  var top5 = [].concat(records).sort(function(a,b){ return b.real - a.real; }).slice(0,5);
+  var maxR = top5.length ? top5[0].real : 1;
+  var t5el = document.getElementById('top5');
+  if(!top5.length){ t5el.innerHTML = '<div class="empty">Sin datos.</div>'; }
+  else {
+    t5el.innerHTML = top5.map(function(r, i){
+      return '<div class="rr"><div class="rn">' + (i+1) + '</div><div class="rm">' + r.fecha + ' #' + r.recibo + '</div><div class="rb"><div class="rf" style="width:' + (r.real / maxR * 100) + '%"></div></div><div class="rv">' + ars(r.real) + '</div></div>';
+    }).join('');
+  }
+
+  var denomTotals = {};
+  NOMS.forEach(function(n){ denomTotals[n] = {total: 0, count: 0}; });
+  records.forEach(function(r){
+    (r.billetes||[]).forEach(function(b){
+      if(denomTotals[b.nom] !== undefined){
+        denomTotals[b.nom].total += b.sub;
+        denomTotals[b.nom].count += b.cant * b.fajo;
+      }
+    });
+  });
+  var denomEl = document.getElementById('denom-grid');
+  var hasAny = NOMS.some(function(n){ return denomTotals[n].total > 0; });
+  if(!hasAny){
+    denomEl.innerHTML = '<div class="empty" style="padding:20px;grid-column:1/-1">Sin datos de billetes aún.</div>';
+  } else {
+    denomEl.innerHTML = NOMS
+      .filter(function(n){ return denomTotals[n].total > 0; })
+      .map(function(n){
+        var d = denomTotals[n];
+        return '<div class="denom-row"><div><div class="dr-nom">Billete ' + ars(n) + '</div><div class="dr-cnt">' + d.count.toLocaleString('es-AR') + ' unidades</div></div><div class="dr-tot">' + ars(d.total) + '</div></div>';
+      }).join('');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   CHEQUES — EMISIÓN
+═══════════════════════════════════════════ */
+function nextChequeNumber(){
+  return 'OP25-' + pad(chequeSeq + 1, 5);
+}
+
+function renderChequePrev(){
+  var fecha    = document.getElementById('ch-fecha').value || today();
+  var cuenta   = document.getElementById('ch-cuenta').value;
+  var num      = document.getElementById('ch-num').value;
+  var importe  = Number(document.getElementById('ch-importe').value) || 0;
+  var detalle  = document.getElementById('ch-detalle').value || '';
+  var receptor = document.getElementById('ch-receptor').value || '';
+  var emisor   = document.getElementById('ch-emisor').value || '';
+
+  // formato fecha legible
+  var fLeg = fecha;
+  try{ fLeg = new Date(fecha+'T00:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'long',year:'numeric'}); }catch(e){}
+
+  document.getElementById('cheque-preview').innerHTML =
+    '<div class="ch-head">' +
+      '<div class="ch-brand">OPEN 25</div>' +
+      '<div class="ch-title">COMPROBANTE DE PAGO</div>' +
+    '</div>' +
+    '<div class="ch-row">' +
+      '<div class="ch-num">N° ' + (num||'—') + '</div>' +
+      '<div class="ch-date"><strong>Fecha:</strong> ' + fLeg + '</div>' +
+    '</div>' +
+    '<div class="ch-field"><div class="ch-lbl">Cuenta:</div><div class="ch-val">' + cuenta + '</div></div>' +
+    '<div class="ch-field"><div class="ch-lbl">Recibí de:</div><div class="ch-val">' + (emisor || '&nbsp;') + '</div></div>' +
+    '<div class="ch-field"><div class="ch-lbl">La suma de:</div><div class="ch-val" style="font-size:16px;font-weight:700">' + ars(importe).toUpperCase() + '</div></div>' +
+    '<div class="ch-imp-box">' +
+      '<div class="ch-imp-lbl">IMPORTE</div>' +
+      '<div class="ch-imp-val">' + ars(importe) + '</div>' +
+    '</div>' +
+    '<div class="ch-field" style="align-items:flex-start"><div class="ch-lbl">En concepto de:</div>' +
+      '<div class="ch-detalle-box" style="flex:1;margin:0">' + (detalle.replace(/\n/g,'<br/>') || '&nbsp;') + '</div></div>' +
+    '<div class="ch-sigs">' +
+      '<div class="ch-sig-block"><div style="height:40px"></div><div class="ch-sig-line">FIRMA RECEPTOR<br/><span style="font-weight:400;color:#555">' + (receptor || '—') + '</span></div></div>' +
+      '<div class="ch-sig-block"><div style="height:40px"></div><div class="ch-sig-line">FIRMA EMISOR<br/><span style="font-weight:400;color:#555">' + (emisor || '—') + '</span></div></div>' +
+    '</div>' +
+    '<div class="ch-footer-note">Documento sin valor fiscal — Uso interno OPEN 25</div>';
+}
+
+function printCheque(){
+  renderChequePrev();
+  window.print();
+}
+
+function saveCheque(){
+  var c = {
+    id:        uid(),
+    num:       document.getElementById('ch-num').value,
+    fecha:     document.getElementById('ch-fecha').value,
+    cuenta:    document.getElementById('ch-cuenta').value,
+    detalle:   document.getElementById('ch-detalle').value.trim(),
+    receptor:  document.getElementById('ch-receptor').value.trim(),
+    emisor:    document.getElementById('ch-emisor').value.trim(),
+    importe:   Number(document.getElementById('ch-importe').value)||0,
+    estado:    'EMITIDO',   // EMITIDO -> FIRMADO
+    createdAt: Date.now(),
+  };
+  if(!c.importe){ alert('Ingresá un importe.'); return; }
+  cheques.unshift(c);
+  chequeSeq++;
+  saveCheques();
+
+  // sync nube
+  if(accessToken){
+    appendChequeToSheets(c).catch(function(err){ console.warn(err); });
+  }
+
+  // reset
+  document.getElementById('ch-importe').value = '';
+  document.getElementById('ch-detalle').value = '';
+  document.getElementById('ch-receptor').value = '';
+  document.getElementById('ch-emisor').value = '';
+  document.getElementById('ch-num').value = nextChequeNumber();
+  renderChequePrev();
+  updateCount();
+  alert('Cheque ' + c.num + ' emitido ✓');
+}
+
+function prepareChequeFromRecord(r){
+  // ir a la pestaña Cheque con datos pre-cargados
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ntab').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('page-cheque').classList.add('on');
+  document.querySelectorAll('.ntab')[2].classList.add('on');
+  window.scrollTo(0, 0);
+  document.getElementById('ch-fecha').value    = r.fecha;
+  document.getElementById('ch-importe').value  = r.teorico;
+  var concept = (r.gastos||[]).map(function(g){ return (g.benef||'(sin nombre)') + ': ' + ars(g.imp); }).join(' · ');
+  document.getElementById('ch-detalle').value  = 'Recibo #' + r.recibo + (concept ? ' — ' + concept : '');
+  document.getElementById('ch-receptor').value = (r.gastos && r.gastos[0] && r.gastos[0].benef) || '';
+  document.getElementById('ch-emisor').value   = 'OPEN 25';
+  document.getElementById('ch-num').value      = nextChequeNumber();
+  renderChequePrev();
+}
+
+function renderChequesHist(){
+  var tb = document.getElementById('chb');
+  if(!cheques.length){
+    tb.innerHTML = '<tr><td colspan="8" class="empty">Sin cheques emitidos.</td></tr>';
+    return;
+  }
+  tb.innerHTML = cheques.map(function(c){
+    var badge = c.estado === 'FIRMADO'
+      ? '<span class="badge bg-ok">FIRMADO Y SUBIDO</span>'
+      : '<span class="badge bg-amb">EMITIDO (PEND. FIRMA)</span>';
+    return '<tr>' +
+      '<td class="mc" style="color:#fff;white-space:nowrap">' + c.num + '</td>' +
+      '<td class="mc" style="color:var(--muted);white-space:nowrap;font-size:11px">' + c.fecha + '</td>' +
+      '<td style="font-size:11px">' + c.cuenta + '</td>' +
+      '<td>' + (c.receptor||'—') + '</td>' +
+      '<td style="font-size:11px;color:var(--muted);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (c.detalle||'—') + '</td>' +
+      '<td class="r cg" style="white-space:nowrap">' + ars(c.importe) + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td><div class="ga">' +
+        '<button class="btn bxs bgh" onclick="reprintCheque(\'' + c.id + '\')">Imprimir</button>' +
+        (c.estado === 'EMITIDO' ? '<button class="btn bxs bg" onclick="markChequeFirmado(\'' + c.id + '\')">Marcar firmado</button>' : '') +
+        '<button class="btn bxs bd" onclick="delCheque(\'' + c.id + '\')">Borrar</button>' +
+      '</div></td>' +
+    '</tr>';
+  }).join('');
+}
+
+function reprintCheque(id){
+  var c = cheques.find(function(x){ return x.id === id; });
+  if(!c) return;
+  // ir a pestaña cheque y rellenar
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('on'); });
+  document.querySelectorAll('.ntab').forEach(function(b){ b.classList.remove('on'); });
+  document.getElementById('page-cheque').classList.add('on');
+  document.querySelectorAll('.ntab')[2].classList.add('on');
+  document.getElementById('ch-fecha').value    = c.fecha;
+  document.getElementById('ch-cuenta').value   = c.cuenta;
+  document.getElementById('ch-num').value      = c.num;
+  document.getElementById('ch-importe').value  = c.importe;
+  document.getElementById('ch-detalle').value  = c.detalle;
+  document.getElementById('ch-receptor').value = c.receptor;
+  document.getElementById('ch-emisor').value   = c.emisor;
+  renderChequePrev();
+  setTimeout(function(){ window.print(); }, 200);
+}
+
+function markChequeFirmado(id){
+  var c = cheques.find(function(x){ return x.id === id; });
+  if(!c) return;
+  c.estado = 'FIRMADO';
+  saveCheques();
+  renderChequesHist();
+}
+
+function delCheque(id){
+  if(!confirm('¿Eliminar este cheque?')) return;
+  cheques = cheques.filter(function(c){ return c.id !== id; });
+  saveCheques();
+  updateCount();
+  renderChequesHist();
+}
+
+/* ═══════════════════════════════════════════
+   BACKUP JSON LOCAL
+═══════════════════════════════════════════ */
+function exportJSON(){
+  var payload = {
+    version: 'v6',
+    exportedAt: new Date().toISOString(),
+    records: records,
+    cheques: cheques,
+    chequeSeq: chequeSeq,
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href = url; a.download = 'open25_backup_' + today() + '.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON(inp){
+  var f = inp.files[0];
+  if(!f) return;
+  var rd = new FileReader();
+  rd.onload = function(ev){
+    try{
+      var data = JSON.parse(ev.target.result);
+      if(!confirm('Importar reemplazará tus datos actuales.\nRegistros actuales: ' + records.length + '\nA importar: ' + (data.records||[]).length + '\n\n¿Continuar?')) return;
+      records = data.records || [];
+      cheques = data.cheques || [];
+      chequeSeq = data.chequeSeq || 0;
+      saveR(); saveCheques();
+      updateCount();
+      renderHist(); renderChequesHist();
+      alert('Backup importado ✓');
+    }catch(e){ alert('Archivo JSON inválido: ' + e.message); }
+  };
+  rd.readAsText(f);
+  inp.value = '';
+}
+
+function wipeAll(){
+  if(!confirm('⚠ Esto borra TODOS los datos locales. ¿Seguro?')) return;
+  if(!confirm('Última confirmación. ¿Borrar todo?')) return;
+  localStorage.removeItem(LS_CURRENT);
+  localStorage.removeItem(LS_CHEQUES);
+  localStorage.removeItem(LS_CHEQUE_SEQ);
+  records = []; cheques = []; chequeSeq = 0;
+  updateCount();
+  renderHist(); renderChequesHist();
+  alert('Datos borrados.');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GOOGLE API — gapi + GIS (Google Identity Services)
+═══════════════════════════════════════════════════════════════════════════════
+   NOTAS DE IMPLEMENTACIÓN:
+   - Usa GIS (Google Identity Services) en vez del deprecado gapi.auth2
+   - El flujo requiere que la página esté servida desde HTTPS
+   - Si las credenciales no están seteadas, las APIs no se inicializan
+     y la app funciona 100% en modo local
+═══════════════════════════════════════════════════════════════════════════ */
+
+function setCloudStatus(state, text){
+  var el = document.getElementById('cloud-status');
+  el.className = '';
+  if(state === 'connected'){ el.classList.add('connected'); }
+  else if(state === 'error'){ el.classList.add('error'); }
+  document.getElementById('cs-text').textContent = text;
+  var stEl = document.getElementById('gc-status');
+  if(stEl) stEl.textContent = text;
+}
+
+function initGoogleAPIs(){
+  if(CLIENT_ID.indexOf('TU_NUEVO') === 0 || API_KEY.indexOf('TU_NUEVA') === 0){
+    setCloudStatus('', 'Modo local (sin credenciales)');
+    return;
+  }
+  setCloudStatus('', 'Cargando Google API…');
+  // cargar gapi
+  var s1 = document.createElement('script');
+  s1.src = 'https://apis.google.com/js/api.js';
+  s1.onload = function(){
+    gapi.load('client', function(){
+      gapi.client.init({ apiKey: API_KEY, discoveryDocs: DISCOVERY_DOCS }).then(function(){
+        gapiReady = true;
+        maybeReadyForSignin();
+      }).catch(function(err){
+        console.error('gapi init error', err);
+        setCloudStatus('error', 'Error gapi: ' + (err.error || err.message || 'desconocido'));
+      });
+    });
+  };
+  s1.onerror = function(){ setCloudStatus('error', 'Falló carga gapi'); };
+  document.head.appendChild(s1);
+
+  // cargar GIS
+  var s2 = document.createElement('script');
+  s2.src = 'https://accounts.google.com/gsi/client';
+  s2.onload = function(){
+    try{
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        callback: function(resp){
+          if(resp.error){
+            setCloudStatus('error', 'Error login: ' + resp.error);
+            return;
+          }
+          accessToken = resp.access_token;
+          gapi.client.setToken({ access_token: accessToken });
+          setCloudStatus('connected', 'Conectado a Google ✓');
+          document.getElementById('gc-signin').style.display = 'none';
+          document.getElementById('gc-signout').style.display = '';
+        },
+      });
+      gisReady = true;
+      maybeReadyForSignin();
+    }catch(e){
+      setCloudStatus('error', 'GIS init error');
+    }
+  };
+  s2.onerror = function(){ setCloudStatus('error', 'Falló carga GIS'); };
+  document.head.appendChild(s2);
+}
+
+function maybeReadyForSignin(){
+  if(gapiReady && gisReady){
+    setCloudStatus('', 'Listo para conectar');
+    document.getElementById('gc-signin').style.display = '';
+  }
+}
+
+function gcSignIn(){
+  if(!tokenClient){ alert('Google API no está lista todavía.'); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function gcSignOut(){
+  if(accessToken){
+    google.accounts.oauth2.revoke(accessToken, function(){});
+  }
+  accessToken = null;
+  setCloudStatus('', 'Desconectado');
+  document.getElementById('gc-signin').style.display = '';
+  document.getElementById('gc-signout').style.display = 'none';
+}
+
+/* ─── DRIVE: encontrar/crear subcarpeta Año/Mes ─── */
+async function findOrCreateFolder(name, parentId){
+  var q = "name='" + name.replace(/'/g,"\\'") + "' and mimeType='application/vnd.google-apps.folder' and '" + parentId + "' in parents and trashed=false";
+  var res = await gapi.client.drive.files.list({ q: q, fields: 'files(id,name)' });
+  if(res.result.files && res.result.files.length){ return res.result.files[0].id; }
+  var crt = await gapi.client.drive.files.create({
+    resource: { name: name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] },
+    fields: 'id'
+  });
+  return crt.result.id;
+}
+
+async function getYearMonthFolder(dateStr){
+  var d = new Date(dateStr + 'T00:00:00');
+  var y = String(d.getFullYear());
+  var m = pad(d.getMonth()+1, 2);
+  var yearId = await findOrCreateFolder(y, DRIVE_FOLDER_ROOT);
+  var monthId = await findOrCreateFolder(m, yearId);
+  return monthId;
+}
+
+/* ─── DRIVE: subir archivo ─── */
+async function uploadFileToDrive(r){
+  if(!accessToken) return;
+  if(!r.filedata || !r.archivo) return;
+  try{
+    var folderId = await getYearMonthFolder(r.fecha);
+    var blob = dataURIToBlob(r.filedata);
+    var metadata = {
+      name: r.fecha + '_recibo_' + r.recibo + '_' + r.archivo,
+      parents: [folderId]
+    };
+    var form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+    var resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink', {
+      method: 'POST',
+      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+      body: form
+    });
+    var json = await resp.json();
+    console.log('Drive upload OK:', json);
+  }catch(e){
+    console.error('Drive upload error:', e);
+  }
+}
+
+/* ─── SHEETS: append row ─── */
+/* NOTA: Para usar Sheets necesitás un Spreadsheet ID. Este código asume que
+   tenés un Sheet llamado "OPEN25_Caja" ya creado y guardás su ID. Si no,
+   en una próxima iteración se puede agregar la creación automática.
+   Por ahora se guarda en LocalStorage la primera vez. */
+const LS_SHEET_ID = 'ffv6_sheet_id';
+
+async function ensureSpreadsheet(){
+  var id = localStorage.getItem(LS_SHEET_ID);
+  if(id) return id;
+  var resp = await gapi.client.sheets.spreadsheets.create({
+    properties: { title: 'OPEN25 - Caja' },
+    sheets: [
+      { properties: { title: 'Recibos' } },
+      { properties: { title: 'Cheques' } }
+    ]
+  });
+  id = resp.result.spreadsheetId;
+  localStorage.setItem(LS_SHEET_ID, id);
+  // headers
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: id,
+    range: 'Recibos!A1',
+    valueInputOption: 'RAW',
+    resource: { values: [['ID','Fecha','Recibo','Teorico','Real','Diferencia','Beneficiarios','Notas','Adjunto']] }
+  });
+  await gapi.client.sheets.spreadsheets.values.update({
+    spreadsheetId: id,
+    range: 'Cheques!A1',
+    valueInputOption: 'RAW',
+    resource: { values: [['ID','N°','Fecha','Cuenta','Receptor','Emisor','Detalle','Importe','Estado']] }
+  });
+  // mover el sheet a la carpeta destino
+  try{
+    await gapi.client.drive.files.update({
+      fileId: id, addParents: DRIVE_FOLDER_ROOT, fields: 'id, parents'
+    });
+  }catch(e){ console.warn('No se pudo mover el sheet:', e); }
+  return id;
+}
+
+async function appendRecordToSheets(r){
+  if(!accessToken) return;
+  var sid = await ensureSpreadsheet();
+  var bens = (r.gastos||[]).map(function(g){ return (g.benef||'(s/n)') + '=' + g.imp; }).join(' | ');
+  await gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: sid,
+    range: 'Recibos!A1',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: { values: [[r.id, r.fecha, r.recibo, r.teorico, r.real, r.diferencia, bens, r.notas||'', r.archivo||'SIN ADJUNTO']] }
+  });
+}
+
+async function appendChequeToSheets(c){
+  if(!accessToken) return;
+  var sid = await ensureSpreadsheet();
+  await gapi.client.sheets.spreadsheets.values.append({
+    spreadsheetId: sid,
+    range: 'Cheques!A1',
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    resource: { values: [[c.id, c.num, c.fecha, c.cuenta, c.receptor, c.emisor, c.detalle, c.importe, c.estado]] }
+  });
+}
+
+async function syncRecordsToSheets(){
+  if(!accessToken) throw new Error('No conectado a Google');
+  for(var i = 0; i < records.length; i++){
+    await appendRecordToSheets(records[i]);
+    if(records[i].filedata){
+      await uploadFileToDrive(records[i]).catch(function(){});
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ARRANQUE
+═══════════════════════════════════════════ */
+checkAuthOnLoad();
+</script>
+</body>
+</html>
 
