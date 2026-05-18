@@ -1986,8 +1986,8 @@ function maybeReadyForSignin(){
 function gcSignIn(){
   if(!gapiReady){ alert('Google API no está lista todavía.'); return; }
   
-  // Ponemos la URL fija EXACTAMENTE igual a como está en la consola de Google, sin la barra del final
-  const redirectUri = 'https://nahue18r.github.io/caja-open25';
+  // URL fija EXACTAMENTE igual a como la configuramos en la consola de Google, con la barra al final
+  const redirectUri = 'https://nahue18r.github.io/caja-open25/';
   
   const oauth2Url = 'https://accounts.google.com/o/oauth2/v2/auth?' +
     'client_id=' + CLIENT_ID +
@@ -1997,10 +1997,6 @@ function gcSignIn(){
     '&include_granted_scopes=true' +
     '&prompt=consent';
     
-  window.location.href = oauth2Url;
-}
-    
-  // Redirección directa
   window.location.href = oauth2Url;
 }
 
